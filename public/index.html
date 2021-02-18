@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Opening Study</title>
+</head>
+<body>
+    <p id = "moves" class = "guessScreen"></p>
+    <label id = "guessLabel" class = "guessScreen" style = "display: none">Guess</label>
+    <input type = "text" id = "guess" class = "guessScreen" style = "display: none">
+    <button type = "button" id = "guessButton" class = "guessScreen" onclick = "guessMade()" style = "display: none">Submit Guess</button>
+    <br class = "guessScreen" style = "display: none;"><br class = "guessScreen" style = "display: none">
+
+    <button id = "playButton" onclick = "play()">Play</button>
+    <br class = "guessScreen" style = "display: none;"><br class = "guessScreen" style = "display: none">
+    <h2 id = "statusP" class = "guessScreen" style = "display: none"></h2>
+    <button id = "updateButton" onclick = "updateFileButtonClicked()">Update File</button>
+
+    <textarea id = "csvData" style = "display: none;"></textarea>
+    <button id = "sendcsvButton" onclick = "sendcsvData()" style = "display: none">Update Databse</button>
+</body>
+
+<script>
+
+    var mysteryMove;
+
+    async function play() {
+        document.getElementById("playButton").textContent = "New Line";
+        document.getElementById("updateButton").style.display = "none";
+        document.getElementById("guess").value = "";
+        let data = await getData();
+        let movesArray = data.split(",");
+        let numColumns = movesArray.indexOf("\n");
+        let numRows = Math.floor(movesArray.length / numColumns);
+        for (let i = movesArray.length-1; i > 0; i -= numColumns) {
+            movesArray[i] = movesArray[i].replace(/\n.*/, "");
+        }
+
+        let moves = [];
+
+        for (let r = 0, i = 1; r < numRows; r += 1, i += numColumns) {
+            moves.push(movesArray.slice(i, numColumns*(r+1)+1));
+        }
+
+        let targetColumn = Math.floor(Math.random() * numColumns);
+        //let targetColumn = 11;
+
+        let movesStr = "";
+
+        let r = 0;
+        let c = 0;
+        movesStr += moves[r][c] + " ";
+        while (c != targetColumn) {
+            r += 1;
+            let newColumn = true;
+            while (newColumn) {
+                newColumn = isMoveToRight(moves, r, c, targetColumn);
+                if (newColumn) {
+                    c = newColumn;
+                }
+            }
+            if (c != targetColumn) {
+                movesStr += moves[r][c] + " ";
+            }
+        }
+
+        let line = movesStr.split(" ");
+        line.pop();
+        let columnMoves = getColumn(moves, targetColumn);
+        let mysteryIndex = Math.floor(Math.random() * columnMoves.length);
+        mysteryMove = columnMoves[mysteryIndex];
+        columnMoves[mysteryIndex] = "___";
+
+        line = line.concat(columnMoves);
+
+        for (let i = 0; i < line.length; i += 2) {
+            line[i] = `<br>${Math.ceil(i/2)+1}. ${line[i]}`;
+        }
+
+        let pText = line.join(" ");
+
+        document.getElementById("moves").innerHTML = pText;
+        let elements = document.getElementsByClassName("guessScreen");
+        for (let element of elements) {
+            element.style.display = "";
+        }
+    }
+
+    function guessMade() {
+        let guess = document.getElementById("guess").value;
+        let statusP = document.getElementById("statusP");
+        if (mysteryMove.toLowerCase().includes(guess.toLowerCase()) && guess != "") {
+            statusP.style.color = "#00dd00";
+            statusP.innerHTML = "Correct!";
+        } else {
+            statusP.style.color = "red";
+            statusP.innerHTML = "Incorrect";
+        }
+    }
+
+    function getColumn(moves, column) {
+        let columnMoves = [];
+        for (let r = moves.length-1; r >= 0; r -= 1) {
+            if (moves[r][column] != "") {
+                columnMoves.push(moves[r][column]);
+            }
+        }
+        return columnMoves.slice(1).reverse();
+    }
+
+    function isMoveToRight(moves, row, column, targetColumn) {
+        for (let c = column+1; c <= targetColumn; c += 1) {
+            if (moves[row][c] != "") {
+                return c;
+            }
+        }
+        return false;
+    }
+
+    async function getData() {
+        const response = await fetch("/getData");
+        const fileData = await response.json();
+        return fileData.data;
+    }
+
+    function updateFileButtonClicked() {
+        document.getElementById("playButton").style.display = "none";
+        document.getElementById("updateButton").style.display = "none";
+        document.getElementById("csvData").style.display = "";
+        document.getElementById("sendcsvButton").style.display = "";
+    }
+    
+    function sendcsvData() {
+        let textInput = document.getElementById("csvData").value;
+        let data = {textInput};
+        const options = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(data)
+        }
+        fetch("/updateData", options).then(() => {
+            location.reload();
+        });
+
+    }
+
+</script>
+
+</html>
