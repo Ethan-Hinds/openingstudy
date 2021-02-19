@@ -5,8 +5,9 @@ app.use(express.json({limit: "1mb"}));
 
 const fs = require("fs");
 
-app.listen(3000, () => {
-    console.log("Listening at 3000");
+const port = process.env.PORT;
+app.listen(port, () => {
+    console.log("Listening at " + port);
 });
 
 app.get("/getData", (request, response) => {
